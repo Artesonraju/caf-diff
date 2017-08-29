@@ -1,7 +1,7 @@
 (ns cafdiff.main
   (:require [feedparser-clj.core :refer [parse-feed]]
             [net.cgrand.enlive-html :as html]
-            [org.httpkit.client :as http]
+            [clj-http.client :as http]
             [chime :refer [chime-ch]]
             [clj-time.core :as time]
             [clj-time.periodic :refer [periodic-seq]]
@@ -44,8 +44,10 @@
   (filter #(not (contains? (set olds) %)) news))
 
 (defn get-dom [url]
-  (html/html-snippet
-      (:body @(http/get url {:insecure? true}))))
+  (let [res (http/get url)]
+    (if-let [error (:error res)]
+      (println "ERROR : Unable to access website : " error)
+      (html/html-snippet (:body res)))))
 
 (defn extract-title [dom]
   (->> (html/select dom [:#fiche-sortie :h1])
@@ -57,16 +59,15 @@
        (string/join " ")))
 
 (defn extract-props [outing-props dom]
-  (->> (html/select dom [:#fiche-sortie :.nice-list])
+  (->> (html/select dom [:li])
        (map :content)
-       (mapcat #(map :content %))
        (map #(vector (-> % first :content first) (second %)))
        (filter #(contains? outing-props (first %)))
        (map #(apply str %))
        (string/join " | ")))
 
 (defn html-entry [outing-props url]
-  (let [dom (get-dom url)]
+  (when-let [dom (get-dom url)]
     (str before-url
          url
          before-title
@@ -109,7 +110,7 @@
         req {:url url
              :method :post
              :headers {"Authorization" auth}}
-        resp @(http/request req)]
+        resp (http/request req)]
     (process-reponse resp "id")))
 
 (defn update-campaign [api auth campaign-id list-id subject]
@@ -120,7 +121,7 @@
              :body (json/write-str {"recipients" {"list_id" list-id}
                                     "settings" {"subject_line" subject
                                                 "title" subject}})}
-        resp @(http/request req)]
+        resp (http/request req)]
     (process-reponse resp "id")))
 
 (defn content-campaign [api auth campaign-id template-id header content]
@@ -131,7 +132,7 @@
              :body (json/write-str {"template" {"id" (Integer/parseInt template-id)
                                                 "sections" {"header" header
                                                             "body" content}}})}
-        resp @(http/request req)]
+        resp (http/request req)]
     (process-reponse resp)))
 
 (defn send-campaign [api auth campaign-id]
@@ -139,7 +140,7 @@
         req {:url url
              :method :post
              :headers {"Authorization" auth}}
-        resp @(http/request req)]
+        resp (http/request req)]
     (process-reponse resp)))
 
 (defn campaign [config list-id subject content]

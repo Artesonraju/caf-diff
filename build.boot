@@ -7,7 +7,7 @@
                   [org.clojure/data.codec "0.1.0"]
                   [org.clojure/data.json "0.2.6"]
                   [enlive "1.1.6"]
-                  [http-kit "2.1.18"]
+                  [clj-http "3.7.0"]
                   [jarohen/chime "0.2.1"]
                   [clj-time "0.13.0"]
                   [samestep/boot-refresh "0.1.0" :scope "test"]])
